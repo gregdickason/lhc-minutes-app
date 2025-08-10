@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deepgramLimiter } from './middleware/rateLimit';
 
 export const config = {
-  runtime: 'edge',
-  regions: ['syd1'] // Australian region for compliance
+  runtime: 'edge'
 };
 
 interface DeepgramTokenResponse {
