@@ -1,0 +1,58 @@
+name: Pre-commit Checks
+
+on:
+  push:
+    branches-ignore: [ main ]  # Run on all branches except main
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  pre-commit-validation:
+    name: Pre-commit Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linting
+      run: npm run lint
+      
+    - name: Type checking
+      run: npx tsc --noEmit
+      
+    - name: Test build
+      run: npm run build
+      
+    - name: Validate build output
+      run: |
+        if [ ! -f "dist/index.html" ]; then
+          echo "❌ Build validation failed - index.html not found in dist/"
+          exit 1
+        fi
+        
+        if [ ! -f "dist/assets/index-"*.js ]; then
+          echo "❌ Build validation failed - JavaScript bundle not found"
+          exit 1
+        fi
+        
+        echo "✅ Build validation successful"
+        echo "📊 Build size summary:"
+        du -sh dist/
+        ls -la dist/assets/
+      
+    - name: Check for build warnings
+      run: |
+        if npm run build 2>&1 | grep -i warning; then
+          echo "⚠️  Build completed with warnings - please review"
+        else
+          echo "✅ Clean build with no warnings"
+        fi
