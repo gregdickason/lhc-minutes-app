@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 export const config = {
@@ -110,7 +109,7 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-function getClientIp(request: NextRequest): string {
+function getClientIp(request: Request): string {
   const xff = request.headers.get('x-forwarded-for');
   if (xff) {
     return xff.split(',')[0].trim();
@@ -118,11 +117,14 @@ function getClientIp(request: NextRequest): string {
   return request.headers.get('x-real-ip') || 'unknown';
 }
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return NextResponse.json(
-      { success: false, error: 'Method not allowed' },
-      { status: 405 }
+    return new Response(
+      JSON.stringify({ success: false, error: 'Method not allowed' }),
+      { 
+        status: 405,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
   }
 
@@ -130,9 +132,12 @@ export default async function handler(req: NextRequest) {
     // Rate limiting
     const clientIp = getClientIp(req);
     if (!checkRateLimit(clientIp)) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests. Please try again later.' },
-        { status: 429 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Too many requests. Please try again later.' }),
+        { 
+          status: 429,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
@@ -140,9 +145,12 @@ export default async function handler(req: NextRequest) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       console.error('Missing OpenAI API key');
-      return NextResponse.json(
-        { success: false, error: 'Service configuration error' },
-        { status: 500 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Service configuration error' }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
@@ -151,9 +159,12 @@ export default async function handler(req: NextRequest) {
     try {
       body = await req.json();
     } catch (error) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON in request body' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON in request body' }),
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
@@ -161,16 +172,22 @@ export default async function handler(req: NextRequest) {
 
     // Validate required fields
     if (!transcript || typeof transcript !== 'string' || transcript.trim().length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Transcript is required and cannot be empty' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Transcript is required and cannot be empty' }),
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
     if (transcript.length > 50000) {
-      return NextResponse.json(
-        { success: false, error: 'Transcript too long. Maximum 50,000 characters.' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Transcript too long. Maximum 50,000 characters.' }),
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
@@ -210,18 +227,24 @@ Please format this transcript into meeting minutes as specified above.`;
 
     const htmlContent = completion.choices[0]?.message?.content;
     if (!htmlContent) {
-      return NextResponse.json(
-        { success: false, error: 'No response from AI service' },
-        { status: 500 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'No response from AI service' }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
     // Validate that we received HTML content with proper structure
     if (!htmlContent.includes('<div class="agenda-item">')) {
       console.error('AI response does not contain expected HTML structure:', htmlContent);
-      return NextResponse.json(
-        { success: false, error: 'Invalid response format from AI service' },
-        { status: 500 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid response format from AI service' }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
@@ -236,25 +259,37 @@ Please format this transcript into meeting minutes as specified above.`;
       summary: summary
     };
 
-    return NextResponse.json({
-      success: true,
-      formattedMinutes
-    } as MinutesFormattingResponse);
+    return new Response(
+      JSON.stringify({
+        success: true,
+        formattedMinutes
+      } as MinutesFormattingResponse),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
 
   } catch (error) {
     console.error('Edge function error:', error);
     
     // Handle OpenAI API errors specifically
     if (error instanceof Error && error.message.includes('API key')) {
-      return NextResponse.json(
-        { success: false, error: 'Service authentication error' },
-        { status: 503 }
+      return new Response(
+        JSON.stringify({ success: false, error: 'Service authentication error' }),
+        { 
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
     
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ success: false, error: 'Internal server error' }),
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
   }
 }

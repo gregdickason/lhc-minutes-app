@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { deepgramLimiter } from './middleware/rateLimit';
 
 export const config = {
@@ -15,11 +14,14 @@ interface DeepgramErrorResponse {
   message?: string;
 }
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req: Request) {
   if (req.method !== 'POST') {
-    return NextResponse.json(
-      { error: 'Method not allowed' },
-      { status: 405 }
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { 
+        status: 405,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
   }
 
@@ -27,11 +29,12 @@ export default async function handler(req: NextRequest) {
     // Rate limiting
     const rateLimitResult = deepgramLimiter.check(req);
     if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
         { 
           status: 429,
           headers: {
+            'Content-Type': 'application/json',
             'X-RateLimit-Remaining': rateLimitResult.remaining.toString()
           }
         }
@@ -44,9 +47,12 @@ export default async function handler(req: NextRequest) {
 
     if (!apiKey || !projectId) {
       console.error('Missing Deepgram configuration');
-      return NextResponse.json(
-        { error: 'Service configuration error' },
-        { status: 500 }
+      return new Response(
+        JSON.stringify({ error: 'Service configuration error' }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
@@ -55,9 +61,12 @@ export default async function handler(req: NextRequest) {
     try {
       body = await req.json();
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
@@ -89,10 +98,16 @@ export default async function handler(req: NextRequest) {
         body: errorData
       });
 
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to generate transcription token'
-      }, { status: 503 });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to generate transcription token'
+        }),
+        { 
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     const tokenData: DeepgramTokenResponse = await deepgramResponse.json();
@@ -100,15 +115,20 @@ export default async function handler(req: NextRequest) {
     // Calculate expiry time
     const expiresAt = new Date(Date.now() + duration * 1000);
 
-    return NextResponse.json({
-      success: true,
-      apiKey: tokenData.key,
-      expiresAt: expiresAt.toISOString()
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': rateLimitResult.remaining.toString()
+    return new Response(
+      JSON.stringify({
+        success: true,
+        apiKey: tokenData.key,
+        expiresAt: expiresAt.toISOString()
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString()
+        }
       }
-    });
+    );
 
   } catch (error) {
     console.error('Edge function error:', error);
@@ -118,9 +138,15 @@ export default async function handler(req: NextRequest) {
       ? 'Internal server error' 
       : 'Unknown error occurred';
 
-    return NextResponse.json({
-      success: false,
-      error: errorMessage
-    }, { status: 500 });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: errorMessage
+      }),
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+// Removed NextRequest import - using standard Request API for Edge Runtime
 
 interface RateLimitConfig {
   uniqueTokenPerInterval: number;
@@ -43,14 +43,14 @@ const store = new RateLimitStore();
 
 export function rateLimit(config: RateLimitConfig) {
   return {
-    check: (request: NextRequest) => {
+    check: (request: Request) => {
       const ip = getClientIp(request);
       return store.check(ip, config);
     }
   };
 }
 
-function getClientIp(request: NextRequest): string {
+function getClientIp(request: Request): string {
   const xff = request.headers.get('x-forwarded-for');
   if (xff) {
     return xff.split(',')[0].trim();
