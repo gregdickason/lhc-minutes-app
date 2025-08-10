@@ -216,21 +216,6 @@ export class MeetingMinutesPDFGenerator {
     this.addTextContent(formattedMinutes.nextMeeting);
   }
 
-  private addSignatureSection(): void {
-    this.checkPageBreak(60);
-    this.currentY += 20;
-    
-    this.doc.setFontSize(12);
-    this.doc.setFont('helvetica', 'normal');
-    this.doc.text('Meeting closed at: _________________', this.margin, this.currentY);
-    this.currentY += 20;
-    
-    this.doc.text('Chairperson: ________________________  Date: ____________', this.margin, this.currentY);
-    this.currentY += 15;
-    
-    this.doc.text('Secretary: ________________________  Date: ____________', this.margin, this.currentY);
-    this.currentY += 20;
-  }
 
   private addSectionTitle(title: string): void {
     this.checkPageBreak(20);
